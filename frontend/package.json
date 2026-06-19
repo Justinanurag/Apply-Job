@@ -10,7 +10,7 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "dev:api": "npm run dev --prefix Backend"
+    "dev:api": "npm run dev --prefix ../Backend"
   },
   "dependencies": {
     "@cloudflare/vite-plugin": "^1.25.5",
@@ -46,6 +46,7 @@
     "@tanstack/react-router": "^1.168.25",
     "@tanstack/react-start": "^1.167.50",
     "@tanstack/router-plugin": "^1.167.28",
+    "@uploadthing/react": "^7.3.3",
     "axios": "^1.9.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -66,6 +67,7 @@
     "tailwind-merge": "^3.5.0",
     "tailwindcss": "^4.2.1",
     "tw-animate-css": "^1.3.4",
+    "uploadthing": "^7.7.4",
     "vaul": "^1.1.2",
     "vite-tsconfig-paths": "^6.0.2",
     "zod": "^3.24.2"

@@ -14,6 +14,8 @@ import { Route as LoginRouteImport } from './pages/login'
 import { Route as ForgotPasswordRouteImport } from './pages/forgot-password'
 import { Route as AppRouteImport } from './pages/_app'
 import { Route as IndexRouteImport } from './pages/index'
+import { Route as ProfileSetupRouteImport } from './pages/profile.setup'
+import { Route as AppSettingsRouteImport } from './pages/_app.settings'
 import { Route as AppResumeRouteImport } from './pages/_app.resume'
 import { Route as AppJobsRouteImport } from './pages/_app.jobs'
 import { Route as AppInterviewsRouteImport } from './pages/_app.interviews'
@@ -45,6 +47,16 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileSetupRoute = ProfileSetupRouteImport.update({
+  id: '/profile/setup',
+  path: '/profile/setup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppSettingsRoute = AppSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AppRoute,
 } as any)
 const AppResumeRoute = AppResumeRouteImport.update({
   id: '/resume',
@@ -94,6 +106,8 @@ export interface FileRoutesByFullPath {
   '/interviews': typeof AppInterviewsRoute
   '/jobs': typeof AppJobsRoute
   '/resume': typeof AppResumeRoute
+  '/settings': typeof AppSettingsRoute
+  '/profile/setup': typeof ProfileSetupRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -107,6 +121,8 @@ export interface FileRoutesByTo {
   '/interviews': typeof AppInterviewsRoute
   '/jobs': typeof AppJobsRoute
   '/resume': typeof AppResumeRoute
+  '/settings': typeof AppSettingsRoute
+  '/profile/setup': typeof ProfileSetupRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -122,6 +138,8 @@ export interface FileRoutesById {
   '/_app/interviews': typeof AppInterviewsRoute
   '/_app/jobs': typeof AppJobsRoute
   '/_app/resume': typeof AppResumeRoute
+  '/_app/settings': typeof AppSettingsRoute
+  '/profile/setup': typeof ProfileSetupRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -137,6 +155,8 @@ export interface FileRouteTypes {
     | '/interviews'
     | '/jobs'
     | '/resume'
+    | '/settings'
+    | '/profile/setup'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -150,6 +170,8 @@ export interface FileRouteTypes {
     | '/interviews'
     | '/jobs'
     | '/resume'
+    | '/settings'
+    | '/profile/setup'
   id:
     | '__root__'
     | '/'
@@ -164,6 +186,8 @@ export interface FileRouteTypes {
     | '/_app/interviews'
     | '/_app/jobs'
     | '/_app/resume'
+    | '/_app/settings'
+    | '/profile/setup'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -172,6 +196,7 @@ export interface RootRouteChildren {
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
+  ProfileSetupRoute: typeof ProfileSetupRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -210,6 +235,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/profile/setup': {
+      id: '/profile/setup'
+      path: '/profile/setup'
+      fullPath: '/profile/setup'
+      preLoaderRoute: typeof ProfileSetupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_app/settings': {
+      id: '/_app/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AppSettingsRouteImport
+      parentRoute: typeof AppRoute
     }
     '/_app/resume': {
       id: '/_app/resume'
@@ -271,6 +310,7 @@ interface AppRouteChildren {
   AppInterviewsRoute: typeof AppInterviewsRoute
   AppJobsRoute: typeof AppJobsRoute
   AppResumeRoute: typeof AppResumeRoute
+  AppSettingsRoute: typeof AppSettingsRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -281,6 +321,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppInterviewsRoute: AppInterviewsRoute,
   AppJobsRoute: AppJobsRoute,
   AppResumeRoute: AppResumeRoute,
+  AppSettingsRoute: AppSettingsRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
@@ -291,6 +332,7 @@ const rootRouteChildren: RootRouteChildren = {
   ForgotPasswordRoute: ForgotPasswordRoute,
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
+  ProfileSetupRoute: ProfileSetupRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -2,8 +2,9 @@ import { createFileRoute, Link, Outlet, redirect, useNavigate } from "@tanstack/
 import { useState } from "react";
 import {
   Activity, Bell, Bot, ChevronDown, FileText, Home,
-  LineChart as LineIcon, LogOut, PanelLeftClose, PanelLeft, Plus, Search, Settings, Sparkles, FileSignature, Mail, CheckSquare, MessageSquare, Files, X, Send
+  LineChart as LineIcon, LogOut, PanelLeftClose, PanelLeft, Plus, Search, Settings, Sparkles, FileSignature, Mail, CheckSquare, MessageSquare, Files, X, Send, Menu
 } from "lucide-react";
+import { SidebarProvider, Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +12,7 @@ import { BackgroundFx } from "@/components/marketing/BackgroundFx";
 import { CommandPalette } from "@/components/marketing/CommandPalette";
 import { motion, AnimatePresence } from "framer-motion";
 import { ensureAuthenticated } from "@/lib/auth/authApi";
+import { ensureProfileComplete } from "@/lib/api/profile";
 import { useAuth } from "@/controllers/useAuth";
 import { confirmAction, notify } from "@/lib/alerts";
 
@@ -23,6 +25,12 @@ export const Route = createFileRoute("/_app")({
         search: { redirect: location.pathname },
       });
     }
+
+    const profileStatus = await ensureProfileComplete();
+    if (!profileStatus.canAccessDashboard) {
+      throw redirect({ to: "/profile/setup" });
+    }
+
     return { user };
   },
   component: AppLayout,
@@ -71,109 +79,73 @@ function AppLayout() {
     <div className="dark relative min-h-screen text-foreground bg-background overflow-x-hidden">
       <BackgroundFx />
 
-      <div className="flex min-h-screen">
-        {/* Sidebar */}
-        <aside className={`hidden md:flex flex-col border-r border-white/5 glass-strong transition-all duration-300 ${collapsed ? "w-[72px]" : "w-[240px]"}`}>
-          <div
-            className={`flex items-center border-b border-white/5 py-4 ${
-              collapsed ? "flex-col gap-2 px-2" : "px-3 gap-2"
-            }`}
-          >
-            <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-brand shadow-glow shrink-0">
-              <Sparkles className="h-4 w-4 text-primary-foreground" />
-            </span>
-            {!collapsed ? (
-              <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                <span className="font-semibold tracking-tight truncate">
-                  Agent<span className="text-gradient">Pro</span>
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setCollapsed((v) => !v)}
-                  title="Collapse sidebar"
-                  aria-label="Collapse sidebar"
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-white/5 hover:text-foreground transition shrink-0"
-                >
-                  <PanelLeftClose className="h-4 w-4" />
-                </button>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setCollapsed((v) => !v)}
-                title="Expand sidebar"
-                aria-label="Expand sidebar"
-                className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-white/5 hover:text-foreground transition shrink-0"
-              >
-                <PanelLeft className="h-4 w-4" />
-              </button>
-            )}
-          </div>
-
-          {!collapsed && (
-            <div className="p-3">
-              <button className="w-full flex items-center justify-between rounded-xl glass px-3 py-2 text-sm hover:bg-white/10 transition">
-                <span className="flex items-center gap-2">
-                  <div className="h-6 w-6 rounded-md bg-gradient-brand grid place-items-center text-[10px] font-semibold text-primary-foreground">{userInitial}</div>
-                  {user?.name ?? "Workspace"}
-                </span>
-                <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-              </button>
-            </div>
-          )}
-
-          <nav className="flex-1 px-2 py-2 space-y-1 overflow-y-auto scrollbar-hide">
-            {sidebarItems.map((i) => (
-              <Link
-                key={i.label}
-                to={i.path}
-                className="w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition text-muted-foreground hover:bg-white/5 hover:text-foreground [&.active]:bg-white/10 [&.active]:text-foreground"
-              >
-                <i.icon className="h-4 w-4 shrink-0" />
-                {!collapsed && <span>{i.label}</span>}
-              </Link>
-            ))}
-          </nav>
-        </aside>
-
-        {/* Main */}
-        <div className="flex-1 min-w-0 flex flex-col h-screen">
-          {/* Topbar */}
-          <header className="sticky top-0 z-40 glass-strong border-b border-white/5">
-            <div className="flex items-center gap-3 px-4 md:px-6 py-3">
-              <Link to="/" className="md:hidden inline-flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-brand">
+      <SidebarProvider>
+        <Sidebar className="border-r border-white/5 glass-strong">
+          <SidebarHeader className="py-4 px-3 border-b border-white/5">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-brand shadow-glow shrink-0">
                 <Sparkles className="h-4 w-4 text-primary-foreground" />
-              </Link>
-              <button
-                onClick={() => setCmdOpen(true)}
-                className="flex flex-1 max-w-md items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-muted-foreground hover:bg-white/10 transition"
+              </span>
+              <span className="font-semibold tracking-tight text-lg">
+                Agent<span className="text-gradient">Pro</span>
+              </span>
+            </div>
+          </SidebarHeader>
+          <SidebarContent className="px-2 py-4">
+            <SidebarMenu>
+              {sidebarItems.map((item) => (
+                <SidebarMenuItem key={item.label}>
+                  <SidebarMenuButton asChild>
+                    <Link
+                      to={item.path}
+                      className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition text-muted-foreground hover:bg-white/5 hover:text-foreground [&.active]:bg-white/10 [&.active]:text-foreground"
+                    >
+                      <item.icon className="h-4 w-4 shrink-0" />
+                      <span>{item.label}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarContent>
+        </Sidebar>
+
+        <SidebarInset className="flex-1 min-w-0 flex flex-col h-screen bg-transparent">
+          {/* Topbar */}
+          <header className="sticky top-0 z-40 glass-strong border-b border-white/5 px-4 md:px-6 py-3 flex items-center gap-3">
+            <SidebarTrigger className="shrink-0 md:hidden" />
+            <Link to="/" className="hidden sm:flex md:hidden inline-flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-brand shrink-0">
+              <Sparkles className="h-4 w-4 text-primary-foreground" />
+            </Link>
+            <button
+              onClick={() => setCmdOpen(true)}
+              className="flex flex-1 max-w-md items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-muted-foreground hover:bg-white/10 transition"
+            >
+              <Search className="h-4 w-4" />
+              <span>Search jobs, resumes, applications…</span>
+              <kbd className="ml-auto rounded bg-white/10 px-1.5 py-0.5 text-[10px] font-mono">⌘K</kbd>
+            </button>
+            <div className="ml-auto flex items-center gap-2">
+              <Button variant="ghost" size="icon" className="rounded-xl"><Bell className="h-4 w-4" /></Button>
+              <Button className="bg-gradient-brand text-primary-foreground border-0 shadow-glow hidden sm:flex"><Plus className="mr-1 h-4 w-4" />New Application</Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="rounded-xl"
+                onClick={() => void handleLogout()}
+                title="Log out"
               >
-                <Search className="h-4 w-4" />
-                <span>Search jobs, resumes, applications…</span>
-                <kbd className="ml-auto rounded bg-white/10 px-1.5 py-0.5 text-[10px] font-mono">⌘K</kbd>
-              </button>
-              <div className="ml-auto flex items-center gap-2">
-                <Button variant="ghost" size="icon" className="rounded-xl"><Bell className="h-4 w-4" /></Button>
-                <Button className="bg-gradient-brand text-primary-foreground border-0 shadow-glow hidden sm:flex"><Plus className="mr-1 h-4 w-4" />New Application</Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="rounded-xl"
-                  onClick={() => void handleLogout()}
-                  title="Log out"
-                >
-                  <LogOut className="h-4 w-4" />
-                </Button>
-                <div className="h-9 w-9 rounded-full bg-gradient-brand grid place-items-center text-sm font-semibold text-primary-foreground" title={user?.email}>{userInitial}</div>
-              </div>
+                <LogOut className="h-4 w-4" />
+              </Button>
+              <div className="h-9 w-9 rounded-full bg-gradient-brand grid place-items-center text-sm font-semibold text-primary-foreground" title={user?.email}>{userInitial}</div>
             </div>
           </header>
 
           <main className="flex-1 overflow-y-auto p-4 md:p-6 pb-20 relative">
             <Outlet />
           </main>
-        </div>
-      </div>
+        </SidebarInset>
+      </SidebarProvider>
 
       {/* Global AI Copilot Toggle */}
       <motion.button 

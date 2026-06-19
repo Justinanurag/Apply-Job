@@ -1,222 +1,328 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Search, MapPin, Briefcase, DollarSign, Filter, Star, Zap, ChevronRight, CheckCircle2, AlertCircle, Sparkles, X } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
+import {
+  Briefcase,
+  Loader2,
+  RefreshCw,
+  Clock,
+  Filter,
+  MapPin,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { JobDetailPanel } from "@/views/components/jobs/JobDetailPanel";
+import { JobFilters, type JobFiltersState } from "@/views/components/jobs/JobFilters";
+import { JobSearchBar } from "@/views/components/jobs/JobSearchBar";
+import { JobPageHeader } from "@/views/components/jobs/JobPageHeader";
+import { useJobs, useJob, useJobSearch, useCollectJobsFromProfile } from "@/controllers/useJobs";
+import { notify } from "@/lib/alerts";
+import { getApiErrorMessage } from "@/lib/api/client";
+import type { Job, JobListItem } from "@/lib/types/job";
+import { getJobTimeInfo } from "@/lib/utils/jobDate";
 
 export const Route = createFileRoute("/_app/jobs")({
   component: JobDiscoveryPage,
 });
 
-const JOBS = [
-  {
-    id: "1",
-    title: "Senior Frontend Engineer",
-    company: "Vercel",
-    location: "San Francisco, CA (Remote)",
-    salary: "$160k - $210k",
-    type: "Full-time",
-    match: 94,
-    atsScore: 88,
-    requiredSkills: ["React", "Next.js", "TypeScript", "Tailwind CSS"],
-    missingSkills: ["GraphQL"],
-    postedAt: "2 hours ago",
-    description: "We are looking for a Senior Frontend Engineer to help build the future of the web...",
-  },
-  {
-    id: "2",
-    title: "Fullstack Developer",
-    company: "Stripe",
-    location: "Remote",
-    salary: "$150k - $200k",
-    type: "Full-time",
-    match: 85,
-    atsScore: 72,
-    requiredSkills: ["React", "Node.js", "PostgreSQL", "TypeScript"],
-    missingSkills: ["Ruby", "AWS"],
-    postedAt: "5 hours ago",
-    description: "Join Stripe to build economic infrastructure for the internet...",
-  },
-  {
-    id: "3",
-    title: "UI Engineer",
-    company: "Linear",
-    location: "New York, NY",
-    salary: "$140k - $180k",
-    type: "Full-time",
-    match: 98,
-    atsScore: 95,
-    requiredSkills: ["React", "TypeScript", "Framer Motion", "CSS"],
+function toListItem(job: Job): JobListItem {
+  const timeInfo = getJobTimeInfo(job);
+  return {
+    ...job,
+    requiredSkills: job.skills ?? [],
     missingSkills: [],
-    postedAt: "1 day ago",
-    description: "Help us build the magical issue tracker that teams love...",
-  }
-];
+    match: undefined,
+    atsScore: undefined,
+    type: "Full-time",
+    salary: undefined,
+    postedAt: timeInfo.relative,
+    postedLabel: timeInfo.label,
+    postedKind: timeInfo.kind,
+  };
+}
 
 function JobDiscoveryPage() {
-  const [selectedJob, setSelectedJob] = useState<typeof JOBS[0] | null>(null);
+  const [searchKeyword, setSearchKeyword] = useState("");
+  const [searchLocation, setSearchLocation] = useState("");
+  const [filters, setFilters] = useState<JobFiltersState>({
+    keyword: "",
+    location: "",
+    source: "all",
+  });
+  const [debouncedFilters, setDebouncedFilters] = useState(filters);
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedFilters(filters), 300);
+    return () => clearTimeout(timer);
+  }, [filters]);
+
+  const { data, isLoading, isError, refetch } = useJobs({
+    search: debouncedFilters.keyword.trim() || undefined,
+    location: debouncedFilters.location.trim() || undefined,
+    source: debouncedFilters.source !== "all" ? debouncedFilters.source : undefined,
+    limit: 50,
+  });
+  const { data: selectedJob, isLoading: isJobLoading } = useJob(selectedJobId);
+  const searchJobs = useJobSearch();
+  const collectProfile = useCollectJobsFromProfile();
+
+  const jobs = (data?.jobs ?? []).map(toListItem);
+
+  const handleSearch = async () => {
+    if (!searchKeyword.trim()) {
+      notify.error("Enter a job keyword to search");
+      return;
+    }
+
+    const toastId = notify.loading("Searching Google Jobs via Serper...");
+    try {
+      const result = await searchJobs.mutateAsync({
+        keyword: searchKeyword.trim(),
+        location: searchLocation.trim() || undefined,
+      });
+      notify.dismiss(toastId);
+      notify.success(`Stored ${result.stored} new jobs (${result.skipped} duplicates skipped)`);
+      await refetch();
+    } catch (err) {
+      notify.dismiss(toastId);
+      notify.error(getApiErrorMessage(err, "Job search failed"));
+    }
+  };
+
+  const handleCollectFromProfile = async () => {
+    const toastId = notify.loading("Collecting jobs from your profile skills...");
+    try {
+      const result = await collectProfile.mutateAsync();
+      notify.dismiss(toastId);
+      notify.success(`Collected ${result.stored} new jobs from your profile`);
+      await refetch();
+    } catch (err) {
+      notify.dismiss(toastId);
+      notify.error(getApiErrorMessage(err, "Profile collection failed"));
+    }
+  };
+
+  const hasActiveFilters =
+    Boolean(debouncedFilters.keyword.trim()) ||
+    Boolean(debouncedFilters.location.trim()) ||
+    debouncedFilters.source !== "all";
 
   return (
-    <div className="flex h-full gap-6">
+    <div className="flex h-full gap-6 lg:gap-8">
+      {/* Desktop sidebar filters */}
+      <aside className="hidden lg:flex flex-col w-72 xl:w-80 shrink-0">
+        <div className="sticky top-0 max-h-[calc(100vh-6rem)] overflow-y-auto custom-scrollbar pr-1">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">
+            Refine results
+          </p>
+          <JobFilters
+            filters={filters}
+            onChange={setFilters}
+            resultCount={data?.pagination.total}
+          />
+        </div>
+      </aside>
+
+      {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">
-        <div className="mb-6">
-          <h1 className="text-2xl font-semibold tracking-tight">Job Discovery</h1>
-          <p className="text-sm text-muted-foreground mt-1">AI matched roles based on your profile.</p>
-        </div>
+        <JobPageHeader
+          onProfileMatch={() => void handleCollectFromProfile()}
+          isProfileMatching={collectProfile.isPending}
+        />
 
-        {/* Search & Filters */}
-        <div className="flex flex-col sm:flex-row gap-3 mb-6">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input className="pl-9 bg-white/5 border-white/10" placeholder="Job title, keywords, or company..." />
-          </div>
-          <div className="relative flex-1 sm:max-w-xs">
-            <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input className="pl-9 bg-white/5 border-white/10" placeholder="City, state, or Remote" />
-          </div>
-          <Button variant="outline" className="bg-white/5 border-white/10 shrink-0">
-            <Filter className="h-4 w-4 mr-2" />
-            Filters
-          </Button>
-        </div>
+        <JobSearchBar
+          keyword={searchKeyword}
+          location={searchLocation}
+          onKeywordChange={setSearchKeyword}
+          onLocationChange={setSearchLocation}
+          onSearch={() => void handleSearch()}
+          onRefresh={() => void refetch()}
+          isSearching={searchJobs.isPending}
+          isRefreshing={isLoading}
+        />
 
-        {/* Filter Pills */}
-        <div className="flex flex-wrap gap-2 mb-6">
-          <Badge variant="secondary" className="bg-white/10 hover:bg-white/15 cursor-pointer border-transparent">Remote Only</Badge>
-          <Badge variant="secondary" className="bg-white/10 hover:bg-white/15 cursor-pointer border-transparent">Senior Level</Badge>
-          <Badge variant="secondary" className="bg-white/10 hover:bg-white/15 cursor-pointer border-transparent">$150k+</Badge>
-          <Badge variant="secondary" className="bg-[oklch(0.82_0.14_200)]/20 text-[oklch(0.82_0.14_200)] hover:bg-[oklch(0.82_0.14_200)]/30 border-transparent cursor-pointer">
-            <Sparkles className="h-3 w-3 mr-1" />
-            High Match (&gt;90%)
-          </Badge>
-        </div>
-
-        {/* Job List */}
-        <div className="flex-1 overflow-y-auto space-y-4 pr-2 custom-scrollbar">
-          {JOBS.map((job) => (
-            <motion.div
-              key={job.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              onClick={() => setSelectedJob(job)}
-              className={`p-5 rounded-2xl border transition-all cursor-pointer ${selectedJob?.id === job.id ? "bg-white/10 border-white/20" : "glass hover:bg-white/5 border-white/5"}`}
+        {/* Mobile / tablet filters */}
+        <div className="lg:hidden mt-4">
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button
+                variant="outline"
+                className="w-full h-11 bg-white/5 border-white/10 justify-between"
+              >
+                <span className="flex items-center">
+                  <Filter className="w-4 h-4 mr-2" />
+                  Filter saved jobs
+                </span>
+                {hasActiveFilters && (
+                  <Badge variant="secondary" className="bg-primary/20 text-primary border-0">
+                    Active
+                  </Badge>
+                )}
+              </Button>
+            </SheetTrigger>
+            <SheetContent
+              side="left"
+              className="w-[min(100vw-2rem,360px)] p-6 bg-background/95 backdrop-blur-xl border-r border-white/10"
             >
-              <div className="flex justify-between items-start gap-4">
-                <div className="flex gap-4">
-                  <div className="h-12 w-12 rounded-xl bg-gradient-brand grid place-items-center text-primary-foreground font-bold text-lg shrink-0">
-                    {job.company[0]}
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-lg leading-tight">{job.title}</h3>
-                    <div className="text-muted-foreground text-sm mt-1">{job.company}</div>
-                    
-                    <div className="flex flex-wrap gap-x-4 gap-y-2 mt-3 text-xs text-muted-foreground">
-                      <div className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{job.location}</div>
-                      <div className="flex items-center gap-1"><Briefcase className="h-3.5 w-3.5" />{job.type}</div>
-                      <div className="flex items-center gap-1"><DollarSign className="h-3.5 w-3.5" />{job.salary}</div>
+              <JobFilters
+                filters={filters}
+                onChange={setFilters}
+                resultCount={data?.pagination.total}
+              />
+            </SheetContent>
+          </Sheet>
+        </div>
+
+        {data?.pagination.total !== undefined && (
+          <p className="text-xs text-muted-foreground mt-4 mb-2">
+            Showing {jobs.length} of {data.pagination.total} jobs
+          </p>
+        )}
+
+        <div className="flex-1 overflow-y-auto space-y-4 pr-1 custom-scrollbar pb-10 mt-2">
+          {isLoading ? (
+            <div className="space-y-4">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="p-5 rounded-2xl border border-white/5 bg-white/5 animate-pulse flex gap-4">
+                  <div className="h-14 w-14 rounded-2xl bg-white/10 shrink-0"></div>
+                  <div className="flex-1 space-y-3">
+                    <div className="h-5 bg-white/10 rounded w-1/3"></div>
+                    <div className="h-4 bg-white/10 rounded w-1/4"></div>
+                    <div className="flex gap-2 mt-4">
+                      <div className="h-6 w-16 bg-white/10 rounded-full"></div>
+                      <div className="h-6 w-20 bg-white/10 rounded-full"></div>
                     </div>
                   </div>
                 </div>
-                <div className="flex flex-col items-end gap-2">
-                  <Badge variant="outline" className={`border-transparent ${job.match >= 90 ? "bg-[oklch(0.82_0.14_200)]/20 text-[oklch(0.82_0.14_200)]" : "bg-white/10"}`}>
-                    <Zap className="h-3 w-3 mr-1" />
-                    {job.match}% Match
-                  </Badge>
-                  <span className="text-[10px] text-muted-foreground">{job.postedAt}</span>
+              ))}
+            </div>
+          ) : isError ? (
+            <div className="rounded-2xl border border-destructive/30 bg-destructive/10 p-8 text-center flex flex-col items-center">
+              <RefreshCw className="h-10 w-10 text-destructive mb-3" />
+              <h3 className="font-semibold text-lg text-destructive">Failed to load jobs</h3>
+              <p className="text-sm text-destructive/80 mt-1">Try searching to collect new listings or refresh the page.</p>
+              <Button onClick={() => void refetch()} variant="outline" className="mt-4 border-destructive/30 text-destructive hover:bg-destructive/20">Try Again</Button>
+            </div>
+          ) : jobs.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-white/10 bg-white/5 p-12 text-center flex flex-col items-center">
+              <div className="h-16 w-16 rounded-full bg-white/10 flex items-center justify-center mb-4">
+                 <Briefcase className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2">
+                {hasActiveFilters ? "No jobs match your filters" : "No jobs found"}
+              </h3>
+              <p className="text-muted-foreground max-w-sm mb-6 text-sm">
+                {hasActiveFilters
+                  ? "Try adjusting your search criteria or clear your filters to see more results."
+                  : "Start by searching for a role like 'React Developer' to collect jobs from various sources."}
+              </p>
+              {hasActiveFilters ? (
+                <Button onClick={() => setFilters({ keyword: "", location: "", source: "all" })} variant="secondary">
+                  Clear Filters
+                </Button>
+              ) : (
+                <Button
+                  onClick={() => setSearchKeyword("React Developer")}
+                  className="bg-gradient-brand border-0"
+                >
+                  Start Searching
+                </Button>
+              )}
+            </div>
+          ) : (
+            jobs.map((job) => (
+              <motion.div
+                key={job.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                onClick={() => setSelectedJobId(job.id)}
+                className={`p-5 rounded-2xl border transition-all cursor-pointer group hover:-translate-y-1 hover:shadow-lg ${
+                  selectedJobId === job.id
+                    ? "bg-white/10 border-primary/50 shadow-md ring-1 ring-primary/20"
+                    : "bg-white/5 hover:bg-white/10 border-white/5"
+                }`}
+              >
+                <div className="flex flex-col sm:flex-row sm:justify-between items-start gap-4">
+                  <div className="flex gap-4 min-w-0 w-full sm:w-auto">
+                    <div className="h-14 w-14 rounded-2xl bg-gradient-brand shadow-sm grid place-items-center text-primary-foreground font-bold text-xl shrink-0">
+                      {(job.company?.[0] ?? job.source[0] ?? "J").toUpperCase()}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-semibold text-lg leading-tight truncate group-hover:text-primary transition-colors">{job.title}</h3>
+                      <div className="text-muted-foreground text-sm mt-1 font-medium truncate">
+                        {job.company ?? "Company not listed"}
+                      </div>
+                      <div className="flex flex-wrap gap-x-3 gap-y-2 mt-3 text-xs text-muted-foreground">
+                        {job.location && (
+                          <div className="flex items-center gap-1 bg-white/5 px-2 py-1 rounded-md border border-white/5 max-w-full">
+                            <MapPin className="h-3.5 w-3.5 shrink-0" />
+                            <span className="truncate">{job.location}</span>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-1 capitalize bg-white/5 px-2 py-1 rounded-md border border-white/5">
+                          <Briefcase className="h-3.5 w-3.5 shrink-0" />
+                          <span className="truncate">{job.source}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between w-full sm:w-auto gap-2 shrink-0 border-t sm:border-t-0 border-white/5 pt-3 sm:pt-0 mt-2 sm:mt-0">
+                    <div className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground bg-white/5 px-2 py-1 rounded-full border border-white/5">
+                      <Clock className="h-3 w-3 shrink-0" />
+                      <span title={job.postedLabel} className="truncate max-w-[120px]">
+                        {job.postedKind === "posted" ? "Posted" : "Found"}{" "}
+                        {job.postedAt}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-              </div>
 
-              <div className="mt-5 flex items-center gap-2">
-                {job.requiredSkills.slice(0, 3).map(s => (
-                  <Badge key={s} variant="secondary" className="bg-white/5 text-xs font-normal text-muted-foreground border-white/5">{s}</Badge>
-                ))}
-                {job.missingSkills.length > 0 && (
-                  <Badge variant="secondary" className="bg-red-500/10 text-red-400 text-xs font-normal border-red-500/20">
-                    Missing: {job.missingSkills[0]}
-                  </Badge>
+                {(job.description || job.snippet) && (
+                  <p className="text-sm text-muted-foreground mt-4 line-clamp-2 leading-relaxed">
+                    {job.description ?? job.snippet}
+                  </p>
                 )}
-              </div>
-            </motion.div>
-          ))}
+
+                {job.requiredSkills && job.requiredSkills.length > 0 && (
+                  <div className="mt-4 flex flex-wrap items-center gap-2 pt-4 border-t border-white/5">
+                    {job.requiredSkills.slice(0, 5).map((s) => (
+                      <Badge
+                        key={s}
+                        variant="secondary"
+                        className="bg-white/5 hover:bg-white/10 transition-colors text-[11px] font-medium text-muted-foreground border-white/5 px-2 py-0.5"
+                      >
+                        {s}
+                      </Badge>
+                    ))}
+                    {job.requiredSkills.length > 5 && (
+                      <span className="text-[11px] text-muted-foreground font-medium pl-1">
+                        +{job.requiredSkills.length - 5} more
+                      </span>
+                    )}
+                  </div>
+                )}
+              </motion.div>
+            ))
+          )}
         </div>
       </div>
 
-      {/* Side Panel Drawer equivalent */}
-      <AnimatePresence>
-        {selectedJob && (
-          <motion.div
-            initial={{ width: 0, opacity: 0 }}
-            animate={{ width: 420, opacity: 1 }}
-            exit={{ width: 0, opacity: 0 }}
-            className="hidden xl:flex flex-col shrink-0 glass-strong border border-white/10 rounded-2xl overflow-hidden"
-          >
-            <div className="p-4 border-b border-white/10 flex items-center justify-between sticky top-0 bg-background/50 backdrop-blur-md z-10">
-              <h2 className="font-medium">Job Overview</h2>
-              <Button variant="ghost" size="icon" onClick={() => setSelectedJob(null)} className="h-8 w-8 rounded-full hover:bg-white/10">
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-            
-            <div className="flex-1 overflow-y-auto p-5 custom-scrollbar">
-              <div className="flex items-center gap-4 mb-6">
-                <div className="h-16 w-16 rounded-2xl bg-gradient-brand grid place-items-center text-primary-foreground font-bold text-2xl shrink-0">
-                  {selectedJob.company[0]}
-                </div>
-                <div>
-                  <h2 className="text-xl font-semibold">{selectedJob.title}</h2>
-                  <div className="text-muted-foreground">{selectedJob.company}</div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 mb-6">
-                <div className="bg-white/5 rounded-xl p-3 border border-white/5">
-                  <div className="text-xs text-muted-foreground mb-1">ATS Score</div>
-                  <div className="text-lg font-semibold flex items-center gap-2">
-                    {selectedJob.atsScore}%
-                    {selectedJob.atsScore > 80 ? <CheckCircle2 className="h-4 w-4 text-green-400" /> : <AlertCircle className="h-4 w-4 text-yellow-400" />}
-                  </div>
-                </div>
-                <div className="bg-white/5 rounded-xl p-3 border border-white/5">
-                  <div className="text-xs text-muted-foreground mb-1">AI Match</div>
-                  <div className="text-lg font-semibold flex items-center gap-2 text-[oklch(0.82_0.14_200)]">
-                    {selectedJob.match}%
-                    <Sparkles className="h-4 w-4" />
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-6">
-                <section>
-                  <h3 className="font-medium mb-3 flex items-center gap-2"><Star className="h-4 w-4 text-yellow-400" /> AI Resume Suggestions</h3>
-                  <div className="bg-white/5 border border-white/10 rounded-xl p-4 text-sm text-muted-foreground space-y-2">
-                    {selectedJob.missingSkills.length > 0 ? (
-                      <p>Consider adding a side project that uses <strong>{selectedJob.missingSkills.join(", ")}</strong> to improve your ATS score by ~8%.</p>
-                    ) : (
-                      <p>Your resume is highly optimized for this role. Emphasize your recent achievements in <strong>{selectedJob.requiredSkills[0]}</strong>.</p>
-                    )}
-                  </div>
-                </section>
-
-                <section>
-                  <h3 className="font-medium mb-3">About the Role</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    {selectedJob.description}
-                    <br/><br/>
-                    This is a placeholder for the full job description. In a real app, this would contain the complete text scraped from the original listing, formatted nicely.
-                  </p>
-                </section>
-              </div>
-            </div>
-
-            <div className="p-4 border-t border-white/10 bg-background/50 backdrop-blur-md sticky bottom-0 grid grid-cols-2 gap-3">
-              <Button variant="outline" className="bg-white/5 border-white/10 hover:bg-white/10">Save</Button>
-              <Button className="bg-gradient-brand text-primary-foreground border-0 shadow-glow hover:opacity-90">Auto Apply <Zap className="h-3 w-3 ml-1.5" /></Button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Job Detail Sheet (All screen sizes) */}
+      <Sheet open={Boolean(selectedJobId)} onOpenChange={(open) => !open && setSelectedJobId(null)}>
+        <SheetContent
+          side="right"
+          className="w-full sm:max-w-[480px] p-0 border-white/10 bg-background/95 backdrop-blur-xl flex flex-col [&>button.absolute]:hidden shadow-2xl"
+        >
+          <JobDetailPanel
+            job={selectedJob}
+            isLoading={isJobLoading}
+            onClose={() => setSelectedJobId(null)}
+            className="h-full"
+          />
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

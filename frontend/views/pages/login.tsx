@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/controllers/useAuth";
 import { getApiErrorMessage } from "@/lib/api/client";
 import { ensureAuthenticated } from "@/lib/auth/authApi";
+import { ensureProfileComplete, canAccessApp } from "@/lib/api/profile";
 import { alertSuccess, notify } from "@/lib/alerts";
 
 const loginSchema = z.object({
@@ -27,7 +28,8 @@ export const Route = createFileRoute("/login")({
   beforeLoad: async () => {
     const user = await ensureAuthenticated();
     if (user) {
-      throw redirect({ to: "/dashboard" });
+      const profileStatus = await ensureProfileComplete();
+      throw redirect({ to: canAccessApp(profileStatus) ? "/dashboard" : "/profile/setup" });
     }
   },
   component: LoginPage,
@@ -53,8 +55,15 @@ function LoginPage() {
       await login(values.email, values.password);
       toast.dismiss(toastId);
       notify.success("Welcome back!");
-      await alertSuccess("Login successful", "Redirecting to your dashboard...");
-      await navigate({ to: redirectTo });
+
+      const profileStatus = await ensureProfileComplete();
+      const destination = canAccessApp(profileStatus) ? redirectTo : "/profile/setup";
+
+      if (canAccessApp(profileStatus)) {
+        await alertSuccess("Login successful", "Redirecting to your dashboard...");
+      }
+
+      await navigate({ to: destination });
     } catch (err) {
       toast.dismiss(toastId);
       const message = getApiErrorMessage(err, "Login failed");

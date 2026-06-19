@@ -9,18 +9,83 @@ datasource db {
 }
 
 model User {
-  id                   String    @id @default(uuid())
+  id                   String       @id @default(uuid())
   name                 String
-  email                String    @unique
+  email                String       @unique
   password             String
-  role                 String    @default("user")
+  role                 String       @default("user")
   refreshToken         String?
   avatar               String?
-  isVerified           Boolean   @default(false)
+  isVerified           Boolean      @default(false)
   resetPasswordToken   String?
   resetPasswordExpires DateTime?
-  createdAt            DateTime  @default(now())
-  updatedAt            DateTime  @updatedAt
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+  profile              UserProfile?
 
   @@map("users")
+}
+
+model UserProfile {
+  id                 String    @id @default(uuid())
+  userId             String    @unique
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  fullName           String?
+  phone              String?
+  location           String?
+  currentRole        String?
+  experience         Int?
+
+  linkedInUrl        String?
+  githubUrl          String?
+  portfolioUrl       String?
+
+  currentCompany     String?
+  currentCTC         Float?
+  expectedCTC        Float?
+  noticePeriod       Int?
+  employmentType     String?
+
+  skills             String[]  @default([])
+  techStacks         String[]  @default([])
+
+  preferredRoles     String[]  @default([])
+  preferredLocations String[]  @default([])
+  salaryExpectation  Float?
+  remotePreference   String?
+  openToRelocation   Boolean   @default(false)
+
+  resumeUrl          String?
+  resumeName         String?
+  resumeKey          String?
+  resumeUploadedAt   DateTime?
+
+  isComplete         Boolean   @default(false)
+
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@map("user_profiles")
+}
+
+model Job {
+  id          String    @id @default(uuid())
+  title       String
+  company     String?
+  location    String?
+  source      String
+  applyUrl    String    @unique
+  description String?   @db.Text
+  snippet     String?
+  skills      String[]  @default([])
+  postedAt    DateTime?
+  postedText  String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([source])
+  @@index([createdAt])
+  @@index([postedAt])
+  @@map("jobs")
 }

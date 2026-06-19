@@ -14,13 +14,17 @@ export default defineConfig({
         target: "http://localhost:5000",
         changeOrigin: true,
       },
+      "/uploads": {
+        target: "http://localhost:5000",
+        changeOrigin: true,
+      },
     },
   },
   resolve: {
     alias: {
-      "@/components": path.resolve(__dirname, "./frontend/views/components"),
-      "@/lib": path.resolve(__dirname, "./frontend/lib"),
-      "@": path.resolve(__dirname, "./frontend"),
+      "@/components": path.resolve(__dirname, "./views/components"),
+      "@/lib": path.resolve(__dirname, "./lib"),
+      "@": path.resolve(__dirname, "."),
     },
     dedupe: [
       "react",
@@ -35,8 +39,8 @@ export default defineConfig({
     tailwindcss(),
     tsconfigPaths({ projects: ["./tsconfig.json"] }),
     TanStackRouterVite({
-      routesDirectory: "./frontend/views/pages",
-      generatedRouteTree: "./frontend/views/routeTree.gen.ts",
+      routesDirectory: "./views/pages",
+      generatedRouteTree: "./views/routeTree.gen.ts",
     }),
     react(),
   ],

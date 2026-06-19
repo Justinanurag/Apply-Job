@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/controllers/useAuth";
 import { getApiErrorMessage } from "@/lib/api/client";
 import { ensureAuthenticated } from "@/lib/auth/authApi";
+import { ensureProfileComplete, canAccessApp } from "@/lib/api/profile";
 import { alertSuccess, notify } from "@/lib/alerts";
 
 const registerSchema = z.object({
@@ -25,7 +26,8 @@ export const Route = createFileRoute("/register")({
   beforeLoad: async () => {
     const user = await ensureAuthenticated();
     if (user) {
-      throw redirect({ to: "/dashboard" });
+      const profileStatus = await ensureProfileComplete();
+      throw redirect({ to: canAccessApp(profileStatus) ? "/dashboard" : "/profile/setup" });
     }
   },
   component: RegisterPage,

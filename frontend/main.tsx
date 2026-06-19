@@ -6,6 +6,7 @@ import { routeTree } from "./views/routeTree.gen";
 import { AuthProvider } from "./controllers/useAuth";
 import { Toaster } from "@/components/ui/sonner";
 import "sweetalert2/dist/sweetalert2.min.css";
+import "@uploadthing/react/styles.css";
 import "./styles/globals.css";
 
 const queryClient = new QueryClient();
