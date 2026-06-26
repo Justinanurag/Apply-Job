@@ -7,6 +7,7 @@ import cookieParser from "cookie-parser";
 import authRoutes from "./routes/auth.routes.js";
 import profileRoutes from "./routes/profile.routes.js";
 import jobRoutes from "./routes/job.routes.js";
+import hrDirectRoutes from "./routes/hrDirect.routes.js";
 
 import { createRouteHandler } from "uploadthing/express";
 import { uploadRouter } from "./uploadthing/router.js";
@@ -68,6 +69,7 @@ app.use(
 app.use("/api/auth", authRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/api/jobs", jobRoutes);
+app.use("/api/hr-direct-jobs", hrDirectRoutes);
 
 app.use((err, _req, res, _next) => {
   console.error(err);

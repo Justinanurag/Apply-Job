@@ -42,7 +42,7 @@ const sidebarItems = [
   { icon: FileText, label: "AI Resume Studio", path: "/resume" },
   { icon: FileSignature, label: "Cover Letters", path: "/cover-letters" },
   { icon: Bot, label: "Auto Apply Agents", path: "/agents" },
-  { icon: Mail, label: "HR Outreach", path: "/outreach" },
+  { icon: Mail, label: "HR Direct Apply", path: "/hr-direct-jobs" },
   { icon: CheckSquare, label: "Applications", path: "/applications" },
   { icon: MessageSquare, label: "Interviews", path: "/interviews" },
   { icon: LineIcon, label: "Analytics", path: "/analytics" },

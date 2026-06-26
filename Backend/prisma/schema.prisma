@@ -22,6 +22,7 @@ model User {
   createdAt            DateTime     @default(now())
   updatedAt            DateTime     @updatedAt
   profile              UserProfile?
+  hrDirectJobMatches   HrDirectJobMatch[]
 
   @@map("users")
 }
@@ -88,4 +89,53 @@ model Job {
   @@index([createdAt])
   @@index([postedAt])
   @@map("jobs")
+}
+
+model HrDirectJob {
+  id                 String              @id @default(uuid())
+  title              String
+  company            String?
+  location           String?
+  experienceRequired String?
+  skills             String[]            @default([])
+  hrName             String?
+  hrEmail            String
+  description        String?             @db.Text
+  sourceUrl          String              @unique
+  source             String              @default("linkedin")
+  workMode           String?
+  postedAt           DateTime?
+  postedText         String?
+  rawSnippet         String?
+  searchKeyword      String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  matches            HrDirectJobMatch[]
+
+  @@index([source])
+  @@index([hrEmail])
+  @@index([workMode])
+  @@index([createdAt])
+  @@map("hr_direct_jobs")
+}
+
+model HrDirectJobMatch {
+  id                 String      @id @default(uuid())
+  userId             String
+  hrDirectJobId      String
+  user               User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job                HrDirectJob @relation(fields: [hrDirectJobId], references: [id], onDelete: Cascade)
+  matchScore         Int         @default(0)
+  missingSkills      String[]    @default([])
+  matchReason        String?     @db.Text
+  tailoredResumeText String?     @db.Text
+  coverLetter        String?     @db.Text
+  recruiterEmailBody String?     @db.Text
+  emailSentAt        DateTime?
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+
+  @@unique([userId, hrDirectJobId])
+  @@index([userId, matchScore])
+  @@map("hr_direct_job_matches")
 }

@@ -19,6 +19,7 @@ import { Route as AppSettingsRouteImport } from './pages/_app.settings'
 import { Route as AppResumeRouteImport } from './pages/_app.resume'
 import { Route as AppJobsRouteImport } from './pages/_app.jobs'
 import { Route as AppInterviewsRouteImport } from './pages/_app.interviews'
+import { Route as AppHrDirectJobsRouteImport } from './pages/_app.hr-direct-jobs'
 import { Route as AppDashboardRouteImport } from './pages/_app.dashboard'
 import { Route as AppCoverLettersRouteImport } from './pages/_app.cover-letters'
 import { Route as AppApplicationsRouteImport } from './pages/_app.applications'
@@ -73,6 +74,11 @@ const AppInterviewsRoute = AppInterviewsRouteImport.update({
   path: '/interviews',
   getParentRoute: () => AppRoute,
 } as any)
+const AppHrDirectJobsRoute = AppHrDirectJobsRouteImport.update({
+  id: '/hr-direct-jobs',
+  path: '/hr-direct-jobs',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppDashboardRoute = AppDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -103,6 +109,7 @@ export interface FileRoutesByFullPath {
   '/applications': typeof AppApplicationsRoute
   '/cover-letters': typeof AppCoverLettersRoute
   '/dashboard': typeof AppDashboardRoute
+  '/hr-direct-jobs': typeof AppHrDirectJobsRoute
   '/interviews': typeof AppInterviewsRoute
   '/jobs': typeof AppJobsRoute
   '/resume': typeof AppResumeRoute
@@ -118,6 +125,7 @@ export interface FileRoutesByTo {
   '/applications': typeof AppApplicationsRoute
   '/cover-letters': typeof AppCoverLettersRoute
   '/dashboard': typeof AppDashboardRoute
+  '/hr-direct-jobs': typeof AppHrDirectJobsRoute
   '/interviews': typeof AppInterviewsRoute
   '/jobs': typeof AppJobsRoute
   '/resume': typeof AppResumeRoute
@@ -135,6 +143,7 @@ export interface FileRoutesById {
   '/_app/applications': typeof AppApplicationsRoute
   '/_app/cover-letters': typeof AppCoverLettersRoute
   '/_app/dashboard': typeof AppDashboardRoute
+  '/_app/hr-direct-jobs': typeof AppHrDirectJobsRoute
   '/_app/interviews': typeof AppInterviewsRoute
   '/_app/jobs': typeof AppJobsRoute
   '/_app/resume': typeof AppResumeRoute
@@ -152,6 +161,7 @@ export interface FileRouteTypes {
     | '/applications'
     | '/cover-letters'
     | '/dashboard'
+    | '/hr-direct-jobs'
     | '/interviews'
     | '/jobs'
     | '/resume'
@@ -167,6 +177,7 @@ export interface FileRouteTypes {
     | '/applications'
     | '/cover-letters'
     | '/dashboard'
+    | '/hr-direct-jobs'
     | '/interviews'
     | '/jobs'
     | '/resume'
@@ -183,6 +194,7 @@ export interface FileRouteTypes {
     | '/_app/applications'
     | '/_app/cover-letters'
     | '/_app/dashboard'
+    | '/_app/hr-direct-jobs'
     | '/_app/interviews'
     | '/_app/jobs'
     | '/_app/resume'
@@ -271,6 +283,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppInterviewsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/hr-direct-jobs': {
+      id: '/_app/hr-direct-jobs'
+      path: '/hr-direct-jobs'
+      fullPath: '/hr-direct-jobs'
+      preLoaderRoute: typeof AppHrDirectJobsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/dashboard': {
       id: '/_app/dashboard'
       path: '/dashboard'
@@ -307,6 +326,7 @@ interface AppRouteChildren {
   AppApplicationsRoute: typeof AppApplicationsRoute
   AppCoverLettersRoute: typeof AppCoverLettersRoute
   AppDashboardRoute: typeof AppDashboardRoute
+  AppHrDirectJobsRoute: typeof AppHrDirectJobsRoute
   AppInterviewsRoute: typeof AppInterviewsRoute
   AppJobsRoute: typeof AppJobsRoute
   AppResumeRoute: typeof AppResumeRoute
@@ -318,6 +338,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppApplicationsRoute: AppApplicationsRoute,
   AppCoverLettersRoute: AppCoverLettersRoute,
   AppDashboardRoute: AppDashboardRoute,
+  AppHrDirectJobsRoute: AppHrDirectJobsRoute,
   AppInterviewsRoute: AppInterviewsRoute,
   AppJobsRoute: AppJobsRoute,
   AppResumeRoute: AppResumeRoute,

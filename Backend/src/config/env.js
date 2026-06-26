@@ -79,4 +79,9 @@ export const env = {
   apiBaseUrl: stripQuotes(process.env.API_BASE_URL) || `http://localhost:${port}`,
   serperApiKey: stripQuotes(process.env.SERPER_API_KEY) || "",
   jobCronEnabled: process.env.JOB_CRON_ENABLED === "true",
+  hrDirectCronEnabled: process.env.HR_DIRECT_CRON_ENABLED === "true",
+  openaiApiKey: stripQuotes(process.env.OPENAI_API_KEY) || "",
+  openaiModel: stripQuotes(process.env.OPENAI_MODEL) || "gpt-4o-mini",
+  resendApiKey: stripQuotes(process.env.RESEND_API_KEY) || "",
+  resendFromEmail: stripQuotes(process.env.RESEND_FROM_EMAIL) || "",
 };
